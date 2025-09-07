@@ -1,0 +1,137 @@
+.snake-container {
+  width: 350px;
+  margin: 40px auto;
+  text-align: center;
+  font-family: "Microsoft YaHei", Arial, sans-serif;
+}
+
+.snake-ui-bg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.snake-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 6px 32px rgba(0,0,0,0.12);
+  padding: 32px 28px 18px 28px;
+  min-width: 370px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.snake-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.snake-logo {
+  font-size: 2.2rem;
+  margin-right: 10px;
+}
+
+.snake-title {
+  font-size: 1.7rem;
+  font-weight: bold;
+  color: #009688;
+  letter-spacing: 2px;
+}
+
+.snake-score {
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.score-num {
+  font-weight: bold;
+  color: #ff9800;
+}
+
+.board {
+  background: #e0f2f1;
+  border-radius: 10px;
+  border: 2px solid #009688;
+  margin: 10px 0 14px 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 10px;
+  display: inline-block;
+}
+
+.row {
+  display: flex;
+}
+
+.cell {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  margin: 1px;
+  background: #fff;
+  border: 1px solid #b2dfdb;
+  transition: background 0.2s;
+}
+
+.cell.snake {
+  background: linear-gradient(135deg, #4caf50 60%, #81c784 100%);
+  box-shadow: 0 0 4px #388e3c;
+}
+
+.cell.food {
+  background: radial-gradient(circle, #ff5252 60%, #ff1744 100%);
+  box-shadow: 0 0 6px #d50000;
+  animation: food-pop 0.5s infinite alternate;
+}
+
+@keyframes food-pop {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+
+.game-over {
+  color: #d32f2f;
+  font-size: 1.2rem;
+  margin: 12px 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.restart-btn {
+  margin-top: 8px;
+  padding: 6px 18px;
+  background: linear-gradient(90deg, #ff9800 60%, #ffc107 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255,152,0,0.12);
+  transition: background 0.2s;
+}
+
+.restart-btn:hover {
+  background: linear-gradient(90deg, #ffb74d 60%, #ffe082 100%);
+}
+
+.tips {
+  color: #888;
+  font-size: 0.95rem;
+  margin-top: 8px;
+  letter-spacing: 1px;
+}
+
+.snake-footer {
+  margin-top: 18px;
+  color: #009688;
+  font-size: 0.95rem;
+  opacity: 0.7;
+}
