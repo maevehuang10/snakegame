@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>糖吃蛇小游戏</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #f8cdda 0%, #1d2b64 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        #ribbon {
+            width: 100vw;
+            height: 60px;
+            background: repeating-linear-gradient(90deg, #ff69b4 0 20px, #ffb347 20px 40px, #7fffd4 40px 60px);
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            box-shadow: 0 8px 32px rgba(255,105,180,0.18);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #gameCanvas {
+            background: #fff;
+            border: 2px solid #333;
+            margin-top: 80px;
+            box-shadow: 0 8px 32px rgba(30,30,60,0.18);
+            border-radius: 18px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 2;
+        }
+        #score {
+            font-size: 32px;
+            margin: 24px;
+            color: #ff69b4;
+            font-weight: bold;
+            text-shadow: 2px 2px 12px #fff, 0 0 18px #ffb347;
+            letter-spacing: 2px;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+        #score.animated {
+            transform: scale(1.25) rotate(-6deg);
+        }
+        #controls {
+            margin: 18px;
+        }
+        button {
+            padding: 12px 32px;
+            font-size: 20px;
+            border: none;
+            border-radius: 24px;
+            background: linear-gradient(90deg, #ff69b4 0%, #ffb347 100%);
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(255,105,180,0.18);
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
+            margin: 0 8px;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #ffb347 0%, #ff69b4 100%);
+            transform: scale(1.12);
+            box-shadow: 0 4px 16px rgba(255,105,180,0.28);
+        }
+        h1 {
+            color: #fff;
+            text-shadow: 2px 2px 12px #ff69b4, 0 0 18px #7fffd4;
+            margin-top: 100px;
+            margin-bottom: 0;
+            font-size: 48px;
+            letter-spacing: 4px;
+            font-family: 'Comic Sans MS', 'Segoe UI', Arial, sans-serif;
+        }
+        .confetti {
+            position: fixed;
+            pointer-events: none;
+            z-index: 10;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            opacity: 0.7;
+            animation: confetti-fall 2.5s linear forwards;
+        }
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0.2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="ribbon"></div>
+    <h1>糖吃蛇小游戏</h1>
+    <div id="score">分数：0</div>
+    <div id="controls">
+        <button id="startBtn">开始</button>
+        <button id="pauseBtn">暂停</button>
+    </div>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+
+        let snake = [{x: 10, y: 10}];
+        let direction = {x: 1, y: 0};
+        let nextDirection = direction;
+        let candy = {x: 5, y: 5};
+        let score = 0;
+        let running = false;
+        let gameOver = false;
+        let intervalId = null;
+        let candyFlash = 0;
+
+        // 彩带动画
+        function spawnConfetti() {
+            for (let i = 0; i < 12; i++) {
+                let conf = document.createElement('div');
+                conf.className = 'confetti';
+                conf.style.left = (Math.random() * window.innerWidth) + 'px';
+                conf.style.top = '-20px';
+                conf.style.background = `linear-gradient(135deg, ${randomColor()}, ${randomColor()})`;
+                conf.style.animationDelay = (Math.random() * 1.5) + 's';
+                document.body.appendChild(conf);
+                setTimeout(() => conf.remove(), 2500);
+            }
+        }
+        function randomColor() {
+            const colors = ['#ff69b4', '#ffb347', '#7fffd4', '#32cd32', '#fff', '#1d2b64'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 糖果闪烁动画
+            candyFlash += 0.08;
+            let flash = Math.abs(Math.sin(candyFlash)) * 0.5 + 0.5;
+
+            // 画糖果（圆形+渐变+闪烁）
+            let candyGrad = ctx.createRadialGradient(
+                candy.x * gridSize + gridSize/2, candy.y * gridSize + gridSize/2, gridSize/4 * flash,
+                candy.x * gridSize + gridSize/2, candy.y * gridSize + gridSize/2, gridSize/2 * flash
+            );
+            candyGrad.addColorStop(0, "#fff");
+            candyGrad.addColorStop(0.5, "#ffb347");
+            candyGrad.addColorStop(1, "#ff69b4");
+            ctx.save();
+            ctx.globalAlpha = 0.7 + 0.3 * flash;
+            ctx.beginPath();
+            ctx.arc(candy.x * gridSize + gridSize/2, candy.y * gridSize + gridSize/2, gridSize/2.2, 0, Math.PI*2);
+            ctx.fillStyle = candyGrad;
+            ctx.shadowColor = "#ff69b4";
+            ctx.shadowBlur = 18 * flash;
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
+            ctx.restore();
+
+            // 画蛇（蛇身渐变+动画）
+            snake.forEach((segment, idx) => {
+                let grad = ctx.createLinearGradient(
+                    segment.x * gridSize, segment.y * gridSize,
+                    segment.x * gridSize + gridSize, segment.y * gridSize + gridSize
+                );
+                grad.addColorStop(0, idx === 0 ? "#32cd32" : "#7fffd4");
+                grad.addColorStop(1, idx === 0 ? "#7fffd4" : "#32cd32");
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(segment.x * gridSize + gridSize/2, segment.y * gridSize + gridSize/2, gridSize/2.1, 0, Math.PI*2);
+                ctx.fillStyle = grad;
+                ctx.shadowColor = idx === 0 ? "#32cd32" : "#7fffd4";
+                ctx.shadowBlur = idx === 0 ? 12 : 4;
+                ctx.fill();
+                ctx.closePath();
+                ctx.shadowBlur = 0;
+
+                // 蛇头加眼睛（眨眼动画）
+                if (idx === 0) {
+                    ctx.beginPath();
+                    let eyeOffsetX = direction.x === 1 ? 5 : direction.x === -1 ? -5 : 0;
+                    let eyeOffsetY = direction.y === 1 ? 5 : direction.y === -1 ? -5 : 0;
+                    let blink = Math.abs(Math.sin(Date.now()/300)) * 2 + 1;
+                    ctx.arc(segment.x * gridSize + gridSize/2 + eyeOffsetX - 4, segment.y * gridSize + gridSize/2 + eyeOffsetY - 4, blink, 0, Math.PI*2);
+                    ctx.arc(segment.x * gridSize + gridSize/2 + eyeOffsetX + 4, segment.y * gridSize + gridSize/2 + eyeOffsetY - 4, blink, 0, Math.PI*2);
+                    ctx.fillStyle = "#222";
+                    ctx.fill();
+                    ctx.closePath();
+                }
+                ctx.restore();
+            });
+
+            // 游戏结束弹窗
+            if (gameOver) {
+                ctx.save();
+                ctx.globalAlpha = 0.88;
+                ctx.fillStyle = '#ff69b4';
+                ctx.fillRect(40, canvas.height/2-60, canvas.width-80, 120);
+                ctx.globalAlpha = 1;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(40, canvas.height/2-60, canvas.width-80, 120);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 36px "Segoe UI", Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('游戏结束', canvas.width / 2, canvas.height / 2);
+                ctx.font = '20px "Segoe UI", Arial';
+                ctx.fillText('得分：' + score, canvas.width / 2, canvas.height / 2 + 38);
+                ctx.restore();
+            }
+        }
+
+        function placeCandy() {
+            let valid = false;
+            while (!valid) {
+                candy.x = Math.floor(Math.random() * tileCount);
+                candy.y = Math.floor(Math.random() * tileCount);
+                valid = !snake.some(seg => seg.x === candy.x && seg.y === candy.y);
+            }
+        }
+
+        function update() {
+            if (!running || gameOver) return;
+
+            direction = nextDirection;
+            const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+
+            // 撞墙
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                gameOver = true;
+                running = false;
+                draw();
+                return;
+            }
+
+            // 撞自己
+            if (snake.some(seg => seg.x === head.x && seg.y === head.y)) {
+                gameOver = true;
+                running = false;
+                draw();
+                return;
+            }
+
+            snake.unshift(head);
+
+            // 吃糖果
+            if (head.x === candy.x && head.y === candy.y) {
+                score += 1;
+                scoreEl.textContent = '分数：' + score;
+                scoreEl.classList.add('animated');
+                setTimeout(() => scoreEl.classList.remove('animated'), 300);
+                spawnConfetti();
+                placeCandy();
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function gameLoop() {
+            update();
+        }
+
+        document.addEventListener('keydown', e => {
+            if (!running) return;
+            switch (e.key) {
+                case 'ArrowUp':
+                    if (direction.y !== 1) nextDirection = {x: 0, y: -1};
+                    break;
+                case 'ArrowDown':
+                    if (direction.y !== -1) nextDirection = {x: 0, y: 1};
+                    break;
+                case 'ArrowLeft':
+                    if (direction.x !== 1) nextDirection = {x: -1, y: 0};
+                    break;
+                case 'ArrowRight':
+                    if (direction.x !== -1) nextDirection = {x: 1, y: 0};
+                    break;
+            }
+        });
+
+        startBtn.onclick = () => {
+            if (running) return;
+            if (gameOver) {
+                // 重置游戏
+                snake = [{x: 10, y: 10}];
+                direction = {x: 1, y: 0};
+                nextDirection = direction;
+                score = 0;
+                scoreEl.textContent = '分数：0';
+                gameOver = false;
+                placeCandy();
+            }
+            running = true;
+            intervalId = setInterval(gameLoop, 120);
+        };
+
+        pauseBtn.onclick = () => {
+            running = false;
+            clearInterval(intervalId);
+        };
+
+        // 动画循环
+        function animate() {
+            draw();
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>
